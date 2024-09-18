@@ -3,7 +3,15 @@ import re
 import time
 import sys
 import qrcode
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
+import serial.tools.list_ports
+
+import serial
+import re
+import time
+import sys
+import qrcode
+from PIL import Image, ImageDraw, ImageFont
 import serial.tools.list_ports
 
 def generate_qr(mac):
@@ -11,8 +19,39 @@ def generate_qr(mac):
     qr.add_data(mac)
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color='black', back_color='white').convert('RGB')
-    qr_img.save('mac_qr.png')
-    print('QR code saved as mac_qr.png')
+
+    qr_width, qr_height = qr_img.size
+    
+    try:
+        font = ImageFont.truetype("arial.ttf", 30) 
+    except IOError:
+        font = ImageFont.load_default()  
+
+    img_width = qr_width
+    img_height = qr_height + 60  
+
+    final_img = Image.new('RGB', (img_width, img_height), 'white')
+    draw = ImageDraw.Draw(final_img)
+
+    text_top = "AIOTRONIC"
+    text_bottom = mac
+
+    text_bbox_top = draw.textbbox((0, 0), text_top, font=font)
+    text_width_top = text_bbox_top[2] - text_bbox_top[0]
+    top_text_y = 0 
+    draw.text(((img_width - text_width_top) / 2, top_text_y), text_top, font=font, fill='black')
+
+    qr_x = 0
+    qr_y = top_text_y + text_bbox_top[3]  
+    final_img.paste(qr_img, (qr_x, qr_y))
+
+    text_bbox_bottom = draw.textbbox((0, 0), text_bottom, font=font)
+    text_width_bottom = text_bbox_bottom[2] - text_bbox_bottom[0]
+    bottom_text_y = qr_y + qr_height - 10  # Posición vertical del texto inferior, cerca del QR
+    draw.text(((img_width - text_width_bottom) / 2, bottom_text_y), text_bottom, font=font, fill='black')
+
+    final_img.save('mac_qr_with_text.png')
+    print('QR code with text saved as mac_qr_with_text.png')
 
 def wait_for_device(port):
     print(f"Waiting for device to reconnect on {port}...")
